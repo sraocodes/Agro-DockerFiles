@@ -1,0 +1,44 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:1
+ENV HOME=/root
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    gcc \
+    g++ \
+    cmake \
+    pkg-config \
+    clang \
+    gfortran \
+    python3-pip \
+    default-jre \
+    libeigen3-dev \
+    libboost-all-dev \
+    python3-tk \
+    libgl1-mesa-glx \
+    x11vnc \
+    xvfb \
+    fluxbox \
+    xterm \
+    sudo
+
+# Install Python packages
+RUN pip3 install numpy scipy matplotlib vtk mpi4py pandas ipython jupyter notebook
+
+# Clone the repository and prepare the build
+RUN git clone --depth 1 -b stable_v2.1 https://github.com/Plant-Root-Soil-Interactions-Modelling/CPlantBox.git
+WORKDIR /CPlantBox
+RUN git submodule update --recursive --init
+RUN cmake .
+RUN make
+
+# Set the PYTHONPATH
+ENV PYTHONPATH="/CPlantBox/src:/CPlantBox/tutorial/examples${PYTHONPATH:+:$PYTHONPATH}"
+
+# Jupyter specific configurations
+EXPOSE 8888
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--no-browser", "--allow-root"]
