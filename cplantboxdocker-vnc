@@ -1,0 +1,54 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV DISPLAY=:1
+ENV HOME=/root
+
+RUN apt-get update && apt-get install -y \
+    wget \
+    git \
+    gcc \
+    g++ \
+    cmake \
+    pkg-config \
+    clang \
+    gfortran \
+    python3-pip \
+    default-jre \
+    libeigen3-dev \
+    libboost-all-dev \
+    python3-tk \
+    libgl1-mesa-glx \
+    x11vnc \
+    xvfb \
+    fluxbox \
+    xterm \
+    sudo
+
+RUN pip3 install numpy scipy matplotlib vtk mpi4py pandas ipython
+
+RUN git clone --depth 1 -b stable_v2.1 https://github.com/Plant-Root-Soil-Interactions-Modelling/CPlantBox.git
+WORKDIR /CPlantBox
+RUN git submodule update --recursive --init
+RUN cmake .
+RUN make
+
+ENV PYTHONPATH="/CPlantBox/src:/CPlantBox/tutorial/examples:${PYTHONPATH}"
+
+RUN mkdir ~/.vnc
+RUN x11vnc -storepasswd 1234 ~/.vnc/passwd
+
+RUN echo "#!/bin/bash" > /start.sh && \
+    echo "Xvfb :1 -screen 0 1024x768x16 &" >> /start.sh && \
+    echo "sleep 1" >> /start.sh && \
+    echo "fluxbox &" >> /start.sh && \
+    echo "x11vnc -forever -usepw -display :1 &" >> /start.sh && \
+    echo "xterm" >> /start.sh && \
+    chmod +x /start.sh
+
+EXPOSE 5900
+# Set a larger font for xterm
+RUN echo "xterm*font: *-fixed-*-*-*-18-*" >> /root/.Xresources
+RUN echo "xterm*boldFont: *-fixed-*-*-*-18-*" >> /root/.Xresources
+RUN echo "xrdb -merge /root/.Xresources" >> /start.sh
+CMD ["/start.sh"]
